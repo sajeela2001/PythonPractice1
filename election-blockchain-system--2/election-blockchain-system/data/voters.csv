@@ -1,0 +1,21 @@
+CNIC,Name,Father Name,Age,Gender,Phone,Email,Address,Constituency,Province,Voter ID,Registered,Has Voted
+12345-1234567-1,Ahmed Khan,Muhammad Khan,25,male,3001234567,ahmed.khan@email.com,"House 12, Street 5, F-7, Islamabad",NA-1,ict,VOTER-000001,Yes,No
+12345-1234567-2,Fatima Ali,Ali Hassan,30,female,3011234568,fatima.ali@email.com,"Flat 3B, Gulberg III, Lahore",NA-2,punjab,VOTER-000002,Yes,No
+12345-1234567-3,Muhammad Usman,Usman Tariq,28,male,3021234569,usman@email.com,"House 45, Block A, North Nazimabad, Karachi",NA-3,sindh,VOTER-000003,Yes,Yes
+12345-1234567-4,Ayesha Malik,Malik Shahid,22,female,3031234570,ayesha.m@email.com,"Street 8, University Town, Peshawar",NA-4,kpk,VOTER-000004,Yes,No
+12345-1234567-5,Bilal Hassan,Hassan Raza,35,male,3041234571,bilal.h@email.com,"House 7, Jinnah Road, Quetta",NA-5,balochistan,VOTER-000005,Yes,No
+12345-1234567-6,Sara Ahmed,Ahmed Nawaz,27,female,3051234572,sara.a@email.com,"Sector G-9/2, Islamabad",NA-1,ict,VOTER-000006,Yes,Yes
+12345-1234567-7,Zain Ali,Ali Akbar,32,male,3061234573,zain.ali@email.com,"House 23, Model Town, Lahore",NA-2,punjab,VOTER-000007,Yes,No
+12345-1234567-8,Nadia Hussain,Hussain Shah,24,female,3071234574,nadia.h@email.com,"Flat 5, Clifton Block 5, Karachi",NA-3,sindh,VOTER-000008,Yes,No
+12345-1234567-9,Imran Khan,Khan Zaman,40,male,3081234575,imran.k@email.com,"House 90, Hayatabad, Peshawar",NA-4,kpk,VOTER-000009,Yes,Yes
+12345-1234567-10,Zara Tariq,Tariq Mehmood,21,female,3091234576,zara.t@email.com,"Street 3, Cantt Area, Quetta",NA-5,balochistan,VOTER-000010,Yes,No
+12345-1234568-1,Omar Farooq,Farooq Ahmed,29,male,3101234577,omar.f@email.com,"House 56, I-8/3, Islamabad",NA-1,ict,VOTER-000011,Yes,No
+12345-1234568-2,Hina Raza,Raza Hussain,26,female,3111234578,hina.r@email.com,"DHA Phase 5, Lahore",NA-2,punjab,VOTER-000012,Yes,Yes
+12345-1234568-3,Ali Raza,Raza Muhammad,33,male,3121234579,ali.r@email.com,"Gulshan-e-Iqbal Block 7, Karachi",NA-3,sindh,VOTER-000013,Yes,No
+12345-1234568-4,Mariam Khan,Khan Bahadur,23,female,3131234580,mariam.k@email.com,"Saddar Bazaar, Peshawar",NA-4,kpk,VOTER-000014,Yes,No
+12345-1234568-5,Hassan Ali,Ali Muhammad,38,male,3141234581,hassan.a@email.com,"Brewery Road, Quetta",NA-5,balochistan,VOTER-000015,Yes,No
+12345-1234568-6,Amna Sheikh,Sheikh Rasheed,28,female,3151234582,amna.s@email.com,"G-10/4, Islamabad",NA-1,ict,VOTER-000016,Yes,Yes
+12345-1234568-7,Usman Ghani,Ghani Akbar,31,male,3161234583,usman.g@email.com,"Township Area, Lahore",NA-2,punjab,VOTER-000017,Yes,No
+12345-1234568-8,Rabia Khan,Khan Zada,25,female,3171234584,rabia.k@email.com,"Malir Cantt, Karachi",NA-3,sindh,VOTER-000018,Yes,No
+12345-1234568-9,Faisal Mehmood,Mehmood Ali,27,male,3181234585,faisal.m@email.com,"Board Bazaar, Peshawar",NA-4,kpk,VOTER-000019,Yes,Yes
+12345-1234568-10,Samina Baloch,Baloch Khan,22,female,3191234586,samina.b@email.com,"Satellite Town, Quetta",NA-5,balochistan,VOTER-000020,Yes,No

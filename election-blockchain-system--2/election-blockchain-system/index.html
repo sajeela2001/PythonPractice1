@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>Election Commission of Pakistan – Blockchain Voting System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&family=Noto+Nastaliq+Urdu&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+</head>
+<body>
+  <!-- OTP Popup Notification -->
+<div id="otpPopup" style="position:fixed;top:20px;right:20px;background:white;border:3px solid #c8a84b;border-radius:10px;padding:20px;z-index:9999;box-shadow:0 10px 30px rgba(0,0,0,0.2);min-width:280px;display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <h4 style="margin:0;color:#0a3d2e;"><i class="fas fa-key"></i> OTP Verification</h4>
+        <button onclick="document.getElementById('otpPopup').style.display='none'" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#999;">✕</button>
+    </div>
+    <div style="background:#fef3c7;padding:15px;border-radius:8px;text-align:center;margin-bottom:10px;">
+        <p style="margin:0;font-size:0.85rem;color:#666;">Your OTP Code:</p>
+        <p id="otpPopupCode" style="font-size:2rem;font-weight:bold;color:#0a3d2e;letter-spacing:8px;margin:5px 0;">------</p>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <p id="otpPopupTimer" style="margin:0;font-size:0.85rem;color:#666;">⏱️ <strong>60</strong>s remaining</p>
+        <button onclick="window.app.resendOTP()" id="otpPopupResend" style="background:#0a3d2e;color:white;border:none;padding:5px 12px;border-radius:3px;cursor:pointer;font-size:0.8rem;display:none;">
+            <i class="fas fa-redo"></i> Resend
+        </button>
+    </div>
+    <p style="margin:8px 0 0 0;font-size:0.75rem;color:#999;text-align:center;">Enter this code in the OTP boxes</p>
+</div>
+  <!-- Login Overlay -->
+  <div class="overlay" id="loginOverlay">
+    <div class="modal-box">
+      <div class="modal-header"><h3 data-key="loginTitle"><i class="fas fa-shield-halved"></i> Admin Login</h3><button class="modal-close" onclick="window.app.closeLogin()"><i class="fas fa-times"></i></button></div>
+      <div class="modal-body">
+        <label class="ml" data-key="username">Username</label><input type="text" class="mi" id="adminUser">
+        <label class="ml" data-key="password">Password</label><input type="password" class="mi" id="adminPass">
+        <button class="btn-login" onclick="window.app.adminPanel.login(document.getElementById('adminUser').value.trim(), document.getElementById('adminPass').value.trim())"><i class="fas fa-sign-in-alt"></i> <span data-key="loginBtn">Login</span></button>
+        <div class="login-error-msg" id="loginErr"><i class="fas fa-exclamation-circle"></i> <span data-key="loginErr">Invalid credentials</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vote Success Overlay -->
+  <div class="overlay" id="voteSuccessOverlay">
+    <div class="vote-modal-box">
+      <div class="vote-modal-header"><div class="success-circle">✅</div><h3 data-key="voteSuccess">Vote Successfully Recorded!</h3><p data-key="voteSuccessDesc">Your vote has been permanently added to the blockchain with biometric verification.</p></div>
+      <div class="vote-modal-body">
+        <p style="font-size:0.85rem;color:var(--gray-400);margin-bottom:12px;" data-key="txIdLabel">Your blockchain tracking ID:</p>
+        <div class="tx-box">
+          <div class="tx-lbl"><i class="fas fa-receipt"></i> <span data-key="txId">Transaction ID</span></div>
+          <div class="tx-val" id="popupTxId" style="font-size:0.85rem;">0x0000...0000</div>
+          <button onclick="window.app.copyTxId()" style="background:#1a5a3e;color:white;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;margin-top:8px;font-size:0.85rem;">
+            <i class="fas fa-copy"></i> Copy TX ID
+          </button>
+        </div>
+        <p style="font-size:0.75rem;color:var(--gray-400);margin:12px 0;">
+          <i class="fas fa-info-circle"></i> <span data-key="saveNote">TX ID copied automatically! You can also verify under <strong>Verify Vote</strong></span>
+        </p>
+        <p style="font-size:0.75rem;color:#22c55e;margin-bottom:16px;" id="copiedMsg" hidden>
+          <i class="fas fa-check-circle"></i> TX ID copied to clipboard!
+        </p>
+        <button class="btn-close-modal" onclick="window.app.closeVoteModal()"><i class="fas fa-check"></i> <span data-key="done">Done</span></button>
+      </div>
+    </div>
+  </div>
+
+ <!-- Top Ribbon -->
+<div class="top-ribbon">
+  <div class="ribbon-inner">
+    <div class="ribbon-left">
+      <a href="tel:111327000"><i class="fas fa-phone-volume"></i> <span data-key="helpline">Helpline: 111-327-000</span></a>
+      <a href="mailto:info@ecp.gov.pk"><i class="fas fa-envelope"></i> info@ecp.gov.pk</a>
+      <div class="blockchain-chip"><span class="blockchain-check">✓</span> <span data-key="blockchainSecured">BLOCKCHAIN SECURED</span> <span class="pulse-dot"></span> <span data-key="live">LIVE</span></div>
+    </div>
+    <div class="ribbon-right">
+     <div class="lang-dropdown">
+    <button class="lang-btn" id="langToggleBtn">
+        <i class="fas fa-globe"></i> <span id="currentLangLabel">English</span> <i class="fas fa-caret-down"></i>
+    </button>
+    <div class="lang-dropdown-menu" id="langDropdownMenu">
+        <a href="#" onclick="window.app.changeLanguage('en')" data-lang="en">🇬🇧 English</a>
+        <a href="#" onclick="window.app.changeLanguage('ur')" data-lang="ur">🇵🇰 اردو</a>
+        <a href="#" onclick="window.app.changeLanguage('pa')" data-lang="pa">🏳️ پنجابی</a>
+        <a href="#" onclick="window.app.changeLanguage('sd')" data-lang="sd">🏳️ سنڌي</a>
+        <a href="#" onclick="window.app.changeLanguage('ba')" data-lang="ba">🏳️ بلوچی</a>
+        <a href="#" onclick="window.app.changeLanguage('pk')" data-lang="pk">🏳️ پښتو</a>
+    </div>
+</div>
+      <button class="admin-btn-top" id="adminBtnTop" onclick="window.app.showLogin()"><i class="fas fa-user-shield"></i> <span data-key="adminTop">Admin</span></button>
+      <button class="logout-btn-top" id="logoutBtnTop" onclick="window.app.adminPanel.logout()"><i class="fas fa-sign-out-alt"></i> <span data-key="logout">Logout</span></button>
+    </div>
+  </div>
+</div>
+
+ <!-- Election Bar -->
+<div class="election-bar">
+  <div class="election-bar-inner">
+    <label data-key="activeElection">Active Election:</label>
+    <select class="election-select" id="electionType" disabled>
+      <option value="national" data-key="nationalAssembly">National Assembly</option>
+      <option value="provincial" data-key="provincialAssembly">Provincial Assembly</option>
+      <option value="senate" data-key="senate">Senate</option>
+      <option value="local" data-key="localGovernment">Local Government</option>
+    </select>
+  </div>
+</div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="emblem-wrap"><div class="emblem-outer"><i class="fas fa-landmark"></i></div></div>
+        <div class="brand-text">
+          <div class="brand-en">Election Commission of Pakistan</div>
+          <div class="brand-ur">الیکشن کمیشن آف پاکستان</div>
+          <div class="brand-sub" data-key="blockchainPortal">Blockchain E-Voting Portal · 2026</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="live-badge"><i class="fas fa-broadcast-tower"></i> <span data-key="liveElection">LIVE ELECTION</span></div>
+        <div class="header-stats">
+          <div class="h-stat"><div class="n" id="hsCandidates">0</div><div class="l" data-key="candidates">Candidates</div></div>
+          <div class="h-divider"></div>
+          <div class="h-stat"><div class="n" id="hsBlocks">0</div><div class="l" data-key="blocks">Blocks</div></div>
+          <div class="h-divider"></div>
+          <div class="h-stat"><div class="n" id="hsVotes">0</div><div class="l" data-key="votes">Votes</div></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+<!-- Navigation -->
+<nav class="main-nav">
+  <div class="nav-inner">
+        <ul>
+      <li><a class="nav-link active" data-page="home"><i class="fas fa-home"></i> <span data-key="home">Home</span></a></li>
+      <li><a class="nav-link" data-page="register"><i class="fas fa-user-plus"></i> <span data-key="register">Register</span></a></li>
+      <li><a class="nav-link" data-page="vote"><i class="fas fa-check-to-slot"></i> <span data-key="castVote">Cast Vote</span></a></li>
+      <li class="admin-nav-item"><a class="nav-link" data-page="admin"><i class="fas fa-gauge-high"></i> <span data-key="dashboard">Dashboard</span></a></li>
+      <li class="admin-nav-item"><a class="nav-link" data-page="election-control"><i class="fas fa-gear"></i> <span data-key="electionControl">Election Control</span></a></li>
+      <li class="admin-nav-item"><a class="nav-link" data-page="verify-voters"><i class="fas fa-user-check"></i> <span data-key="verifyVoters">Verify Voters</span></a></li>
+      <li class="admin-nav-item"><a class="nav-link" data-page="manage"><i class="fas fa-users-cog"></i> <span data-key="manage">Candidates</span></a></li>
+      <li><a class="nav-link" data-page="results"><i class="fas fa-chart-bar"></i> <span data-key="results">Results</span></a></li>
+      <li><a class="nav-link" data-page="verify"><i class="fas fa-magnifying-glass"></i> <span data-key="verify">Verify</span></a></li>
+      <li><a class="nav-link" data-page="form45"><i class="fas fa-file-contract"></i> <span data-key="form45">Form-45</span></a></li>
+      <li><a class="nav-link" data-page="complaints"><i class="fas fa-clipboard-list"></i> <span data-key="complaints">Complaints</span></a></li>
+      <li><a class="nav-link" data-page="faq"><i class="fas fa-question-circle"></i> <span data-key="faq">FAQs</span></a></li>
+    </ul>
+  </div>
+</nav>
+
+  <!-- Main Content -->
+  <main class="site-main">
+    <!-- Home Page -->
+    <div class="page active" id="page-home">
+      <div class="hero">
+        <div class="hero-content">
+          <div class="hero-tag"><i class="fas fa-shield-halved"></i> <span data-key="blockchainSecured">Blockchain Secured</span></div>
+          <h2 id="heroH">National Assembly Elections 2026</h2>
+          <p data-key="heroDesc">Pakistan's most transparent election system powered by immutable blockchain technology with biometric verification.</p>
+          <div class="hero-actions">
+            <button class="btn-hero-primary" onclick="window.app.navigation.navigateTo('vote')"><i class="fas fa-vote-yea"></i> <span data-key="castVoteBtn">Cast Your Vote</span></button>
+            <button class="btn-hero-outline" onclick="window.app.navigation.navigateTo('results')"><i class="fas fa-chart-pie"></i> <span data-key="viewResultsBtn">View Results</span></button>
+          </div>
+        </div>
+        <div class="hero-graphic"><div class="hero-emblem-large">🏛️</div></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-body"><h3 data-key="activeCandidates">Active Candidates</h3><div class="val" id="sCandidates">0</div></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-cubes"></i></div><div class="stat-body"><h3 data-key="blockchainBlocks">Blocks</h3><div class="val" id="sBlocks">0</div></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-ballot-check"></i></div><div class="stat-body"><h3 data-key="totalVotes">Total Votes</h3><div class="val" id="sVotes">0</div></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-body"><h3 data-key="turnout">Turnout</h3><div class="val" id="sTurnout">0%</div></div></div>
+      </div>
+                  <!-- Quick Actions -->
+      <div class="quick-actions" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;">
+        <div class="action-card" onclick="window.app.navigation.navigateTo('register')" style="background:white;border:2px solid var(--gray-200);border-radius:var(--radius-lg);padding:25px;text-align:center;cursor:pointer;transition:all 0.3s;box-shadow:var(--shadow-sm);">
+          <div style="font-size:2.5rem;margin-bottom:10px;">📝</div>
+          <h3 style="color:var(--green-dark);margin-bottom:5px;" data-key="registerToVote">Register to Vote</h3>
+          <p style="color:var(--gray-400);font-size:0.85rem;" data-key="registerDesc">Complete your voter registration</p>
+        </div>
+        <div class="action-card" onclick="window.app.navigation.navigateTo('vote')" style="background:white;border:2px solid var(--gray-200);border-radius:var(--radius-lg);padding:25px;text-align:center;cursor:pointer;transition:all 0.3s;box-shadow:var(--shadow-sm);">
+          <div style="font-size:2.5rem;margin-bottom:10px;">🗳️</div>
+          <h3 style="color:var(--green-dark);margin-bottom:5px;" data-key="castYourVoteBtn">Cast Your Vote</h3>
+          <p style="color:var(--gray-400);font-size:0.85rem;" data-key="voteDesc">Vote securely with blockchain</p>
+        </div>
+        <div class="action-card" onclick="window.app.navigation.navigateTo('results')" style="background:white;border:2px solid var(--gray-200);border-radius:var(--radius-lg);padding:25px;text-align:center;cursor:pointer;transition:all 0.3s;box-shadow:var(--shadow-sm);">
+          <div style="font-size:2.5rem;margin-bottom:10px;">📊</div>
+          <h3 style="color:var(--green-dark);margin-bottom:5px;" data-key="viewResults">View Results</h3>
+          <p style="color:var(--gray-400);font-size:0.85rem;" data-key="resultsDesc">Real-time election results</p>
+        </div>
+        <div class="action-card" onclick="window.app.navigation.navigateTo('verify')" style="background:white;border:2px solid var(--gray-200);border-radius:var(--radius-lg);padding:25px;text-align:center;cursor:pointer;transition:all 0.3s;box-shadow:var(--shadow-sm);">
+          <div style="font-size:2.5rem;margin-bottom:10px;">🔍</div>
+          <h3 style="color:var(--green-dark);margin-bottom:5px;" data-key="verifyVoteBtn">Verify Vote</h3>
+          <p style="color:var(--gray-400);font-size:0.85rem;" data-key="verifyDesc">Check your vote on blockchain</p>
+        </div>
+      </div>
+      
+      <!-- Election Info Cards -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px;">
+        <!-- LEFT CARD: Updates -->
+        <div style="background:white;border-radius:var(--radius-lg);padding:25px;box-shadow:var(--shadow-sm);border-left:5px solid #f59e0b;">
+          <h3 style="color:var(--green-dark);margin-bottom:15px;"><i class="fas fa-info-circle"></i> <span data-key="electionUpdates">Election Updates</span></h3>
+          <div style="border-left:3px solid #f59e0b;padding-left:15px;margin-bottom:12px;">
+            <p style="color:#f59e0b;font-weight:bold;font-size:0.9rem;" data-key="liveLabel">🟢 LIVE</p>
+            <p style="color:var(--gray-600);" data-key="liveDesc">National Assembly Elections 2026 are now open! Cast your vote before 5 PM.</p>
+          </div>
+          <div style="border-left:3px solid #f59e0b;padding-left:15px;margin-bottom:12px;">
+            <p style="color:#f59e0b;font-weight:bold;font-size:0.9rem;" data-key="votingHours">🕐 VOTING HOURS</p>
+            <p style="color:var(--gray-600);" id="votingHoursStatus">Checking voting status...</p>
+          </div>
+          <div style="border-left:3px solid #22c55e;padding-left:15px;margin-bottom:12px;">
+            <p style="color:#22c55e;font-weight:bold;font-size:0.9rem;" data-key="importantLabel">📋 IMPORTANT</p>
+            <p style="color:var(--gray-600);" data-key="importantDesc">Bring your original CNIC and registered mobile number for OTP verification.</p>
+          </div>
+          <div style="border-left:3px solid #3b82f6;padding-left:15px;">
+            <p style="color:#3b82f6;font-weight:bold;font-size:0.9rem;" data-key="securityLabel">🔒 SECURITY</p>
+            <p style="color:var(--gray-600);" data-key="securityDesc">Your vote is secured with SHA-256 blockchain technology and facial biometric verification.</p>
+          </div>
+        </div>
+        <!-- RIGHT CARD: Timeline -->
+        <div style="background:white;border-radius:var(--radius-lg);padding:25px;box-shadow:var(--shadow-sm);border-left:5px solid var(--green-dark);">
+          <h3 style="color:var(--green-dark);margin-bottom:15px;"><i class="fas fa-clock"></i> <span data-key="electionTimeline">Election Timeline</span></h3>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;">
+            <div style="background:#dcfce7;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#166534;font-weight:bold;">1</div>
+            <div><strong data-key="voterRegistration">Voter Registration</strong><p style="color:var(--gray-400);font-size:0.8rem;" data-key="registrationDates">June 1 - June 15, 2026</p></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;">
+            <div style="background:#fef3c7;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#92400e;font-weight:bold;">2</div>
+            <div><strong data-key="candidateFiling">Candidate Filing</strong><p style="color:var(--gray-400);font-size:0.8rem;" data-key="filingDates">June 16 - June 30, 2026</p></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;">
+            <div style="background:#dbeafe;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#1e40af;font-weight:bold;">3</div>
+            <div><strong data-key="campaignPeriod">Campaign Period</strong><p style="color:var(--gray-400);font-size:0.8rem;" data-key="campaignDates">July 1 - July 24, 2026</p></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="background:#fee2e2;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#7f1d1d;font-weight:bold;">4</div>
+            <div><strong data-key="electionDay">Election Day</strong><p style="color:var(--gray-400);font-size:0.8rem;" data-key="electionDate">July 25, 2026</p></div>
+          </div>
+        </div>
+      </div>
+      
+     <!-- Collapsible Countdown Clock -->
+<div id="countdownClock" style="position:fixed;bottom:20px;right:20px;z-index:1000;">
+    <!-- Minimized version -->
+    <div id="countdownMinimized" onclick="document.getElementById('countdownClockFull').style.display='block';this.style.display='none';" style="background:var(--green-dark);color:white;padding:10px 15px;border-radius:25px;cursor:pointer;box-shadow:var(--shadow-lg);display:none;align-items:center;gap:8px;font-weight:bold;font-size:0.9rem;">
+        <div id="countdownDotMini" style="width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite;"></div>
+        <span id="countdownTimerMini">00:00:00</span>
+    </div>
+    <!-- Full version -->
+    <div id="countdownClockFull" style="background:white;border:2px solid var(--green-dark);border-radius:12px;padding:15px 20px;box-shadow:var(--shadow-lg);text-align:center;min-width:200px;">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:5px;">
+            <button onclick="document.getElementById('countdownClockFull').style.display='none';document.getElementById('countdownMinimized').style.display='flex';" style="background:none;border:none;cursor:pointer;font-size:1rem;color:#999;" title="Minimize">✕</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;justify-content:center;">
+            <div id="countdownDot" style="width:10px;height:10px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite;"></div>
+            <span id="countdownStatus" style="font-weight:bold;color:var(--green-dark);font-size:0.9rem;">Voting Open</span>
+        </div>
+        <div id="countdownTimer" style="font-family:var(--font-mono);font-size:1.5rem;font-weight:bold;color:var(--green-dark);">00:00:00</div>
+        <p id="countdownLabel" style="font-size:0.7rem;color:var(--gray-400);margin-top:5px;">until voting closes</p>
+    </div>
+</div>
+      <!-- Keep the blockchain strip -->
+      <div class="blockchain-strip"><div class="card-title"><div class="card-title-icon"><i class="fas fa-link"></i></div><h3 data-key="liveBlockchain">Live Blockchain</h3></div><div class="chain-scroll" id="chainScroll"></div></div>
+      </div>
+    <!-- Voter Registration Page -->
+    <div class="page" id="page-register">
+      <div class="page-heading"><h2 data-key="voterRegistration">Voter Registration</h2><p data-key="registerSub">Register to vote with CNIC and OTP verification.</p></div>
+      <div class="vote-layout">
+        <div class="vote-booth">
+          <h4 style="margin-bottom:16px;color:var(--green-dark);"><i class="fas fa-user-plus"></i> <span data-key="registrationForm">Registration Form</span></h4>
+          <div id="registerStep1">
+            <div class="voter-form-grid">
+              <div class="vote-field-group"><label data-key="fullName">Full Name *</label><input type="text" class="vote-input" id="regName" placeholder="Enter your full name"></div>
+              <div class="vote-field-group"><label data-key="fathersName">Father's Name *</label><input type="text" class="vote-input" id="regFather" placeholder="Father's name"></div>
+              <div class="vote-field-group"><label data-key="cnicNumber">CNIC Number *</label><input type="text" class="vote-input" id="regCnic" placeholder="12345-1234567-1" maxlength="15"></div>
+              <div class="vote-field-group"><label data-key="age">Age *</label><input type="number" class="vote-input" id="regAge" placeholder="18+" min="18" max="120"></div>
+              <div class="vote-field-group"><label data-key="gender">Gender *</label><select class="vote-input" id="regGender"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+              <div class="vote-field-group"><label data-key="email">Email Address *</label><input type="email" class="vote-input" id="regEmail" placeholder="example@email.com"></div>
+              <div class="vote-field-group"><label data-key="phone">Phone Number *</label><input type="tel" class="vote-input" id="regPhone" placeholder="03XX-XXXXXXX"></div>
+              <div class="vote-field-group full-width"><label data-key="address">Address *</label><input type="text" class="vote-input" id="regAddress" placeholder="Complete address"></div>
+              <div class="vote-field-group"><label data-key="provinceLabel">Province *</label>
+                  <select class="vote-input" id="regProvince" onchange="window.app.updateRegDistricts()">
+                      <option value="">Select Province</option>
+                      <option value="punjab">Punjab</option>
+                      <option value="sindh">Sindh</option>
+                      <option value="kpk">KPK</option>
+                      <option value="balochistan">Balochistan</option>
+                      <option value="ict">Islamabad Capital</option>
+                  </select>
+              </div>
+              <div class="vote-field-group"><label data-key="districtLabel">District *</label>
+                  <select class="vote-input" id="regDistrict" onchange="window.app.updateRegConstituencies()" disabled>
+                      <option value="">Select District</option>
+                  </select>
+              </div>
+              <div class="vote-field-group"><label data-key="constituencyLabel">Constituency *</label>
+                  <select class="vote-input" id="regConstituency" disabled>
+                      <option value="">Select Constituency</option>
+                  </select>
+              </div>
+            </div>
+            <button class="btn-submit-vote" onclick="window.app.registerVoter()" style="background:#1a5a3e;">
+              <i class="fas fa-arrow-right"></i> <span data-key="continueOTP">Continue to OTP Verification</span>
+            </button>
+          </div>
+          <div id="registerStep2" style="display:none;">
+            <div class="camera-section" style="text-align:center;">
+              <h4><i class="fas fa-shield-halved"></i> <span data-key="otpVerification">OTP Verification</span></h4>
+              <p style="margin-bottom:15px;color:#666;" data-key="otpSent">An OTP has been sent to your phone and email.</p>
+              <div style="display:flex;gap:10px;justify-content:center;margin-bottom:15px;">
+                <input type="text" class="vote-input" id="otpInput1" maxlength="1" style="width:50px;text-align:center;font-size:1.5rem;" oninput="if(this.value)document.getElementById('otpInput2').focus()">
+                <input type="text" class="vote-input" id="otpInput2" maxlength="1" style="width:50px;text-align:center;font-size:1.5rem;" oninput="if(this.value)document.getElementById('otpInput3').focus()">
+                <input type="text" class="vote-input" id="otpInput3" maxlength="1" style="width:50px;text-align:center;font-size:1.5rem;" oninput="if(this.value)document.getElementById('otpInput4').focus()">
+                <input type="text" class="vote-input" id="otpInput4" maxlength="1" style="width:50px;text-align:center;font-size:1.5rem;" oninput="if(this.value)document.getElementById('otpInput5').focus()">
+                <input type="text" class="vote-input" id="otpInput5" maxlength="1" style="width:50px;text-align:center;font-size:1.5rem;" oninput="if(this.value)document.getElementById('otpInput6').focus()">
+                <input type="text" class="vote-input" id="otpInput6" maxlength="1" style="width:50px;text-align:center;font-size:1.5rem;">
+              </div>
+              <p style="color:#666;font-size:0.8rem;" id="otpTimer">Time remaining: <strong>60</strong> seconds</p>
+              <button class="btn-submit-vote" onclick="window.app.verifyOTP()">
+                <i class="fas fa-check-circle"></i> Verify OTP & Complete Registration
+              </button>
+              <br>
+              <button class="btn-camera" onclick="window.app.resendOTP()" id="resendOtpBtn" style="display:none;margin-top:10px;">
+                <i class="fas fa-redo"></i> Resend OTP
+              </button>
+            </div>
+          </div>
+          <div id="registerStep3" style="display:none;text-align:center;">
+            <div class="camera-section">
+              <div style="font-size:4rem;">✅</div>
+              <h4 style="color:#14532d;" data-key="registrationSuccess">Registration Successful!</h4>
+              <p data-key="voterIdLabel">Your Voter ID:</p>
+              <div class="tx-box"><div class="tx-val" id="voterIdDisplay">VOTER-000000</div></div>
+              <p style="font-size:0.8rem;color:#666;" data-key="regSuccessMsg">You can now cast your vote. Your Voter ID is required for voting.</p>
+              <button class="btn-submit-vote" onclick="window.app.navigation.navigateTo('vote')">
+                <i class="fas fa-vote-yea"></i> Go to Cast Vote
+              </button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="vote-sidebar-card"><h4><i class="fas fa-info-circle"></i> <span data-key="registrationInfo">Registration Info</span></h4>
+            <div class="info-row"><i class="fas fa-check-circle"></i><p data-key="regInfo1">Register with valid CNIC and personal details.</p></div>
+            <div class="info-row"><i class="fas fa-mobile-alt"></i><p data-key="regInfo2">OTP will be sent to your phone and email.</p></div>
+            <div class="info-row"><i class="fas fa-id-card"></i><p data-key="regInfo3">You'll receive a unique Voter ID after verification.</p></div>
+            <div class="info-row"><i class="fas fa-vote-yea"></i><p data-key="regInfo4">Use your Voter ID to cast your vote.</p></div>
+          </div>
+          <div class="vote-sidebar-card"><h4><i class="fas fa-list-check"></i> <span data-key="requirements">Requirements</span></h4>
+            <div class="info-row"><i class="fas fa-id-card"></i><p data-key="req1">Valid CNIC (Age 18+)</p></div>
+            <div class="info-row"><i class="fas fa-phone"></i><p data-key="req2">Active phone number for OTP</p></div>
+            <div class="info-row"><i class="fas fa-envelope"></i><p data-key="req3">Valid email address</p></div>
+            <div class="info-row"><i class="fas fa-camera"></i><p data-key="req4">Photo for biometric verification</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Vote Page -->
+    <div class="page" id="page-vote">
+      <div class="page-heading"><h2 data-key="castYourVote">Cast Your Vote – <span id="voteElectionType">National Assembly</span></h2><p data-key="voteSub">Complete all fields and capture your photo for biometric verification.</p></div>
+      <div class="vote-layout">
+        <div class="vote-booth">
+          <h4 style="margin-bottom:16px;color:var(--green-dark);"><i class="fas fa-id-card"></i> <span data-key="voterInfo">Voter Information</span></h4>
+          <div class="voter-form-grid">
+            <div class="vote-field-group"><label data-key="fullName">Full Name *</label><input type="text" class="vote-input" id="voterName" placeholder="Enter your full name"></div>
+            <div class="vote-field-group"><label data-key="fathersName">Father's Name *</label><input type="text" class="vote-input" id="voterFather" placeholder="Father's name"></div>
+            <div class="vote-field-group"><label data-key="cnicNumber">CNIC Number *</label><input type="text" class="vote-input" id="cnicInput" placeholder="12345-1234567-1" maxlength="15"><div class="cnic-alert" id="cnicAlert"><i class="fas fa-circle-exclamation"></i> <span data-key="cnicAlert">This CNIC has already voted.</span></div></div>
+            <div class="vote-field-group"><label data-key="age">Age *</label><input type="number" class="vote-input" id="voterAge" placeholder="18+" min="18" max="120"></div>
+            <div class="vote-field-group"><label data-key="gender">Gender *</label><select class="vote-input" id="voterGender"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+            <div class="vote-field-group"><label data-key="phone">Phone Number *</label><input type="tel" class="vote-input" id="voterPhone" placeholder="03XX-XXXXXXX"></div>
+            <div class="vote-field-group full-width"><label data-key="address">Address *</label><input type="text" class="vote-input" id="voterAddress" placeholder="Complete address"></div>
+            <div class="vote-field-group"><label data-key="provinceLabel">Province *</label>
+                <select class="vote-input" id="voteProvince" onchange="window.app.updateVoteDistricts()">
+                    <option value="">Select Province</option>
+                    <option value="punjab">Punjab</option>
+                    <option value="sindh">Sindh</option>
+                    <option value="kpk">Khyber Pakhtunkhwa</option>
+                    <option value="balochistan">Balochistan</option>
+                    <option value="ict">Islamabad Capital</option>
+                </select>
+            </div>
+            <div class="vote-field-group"><label data-key="districtLabel">District *</label>
+                <select class="vote-input" id="voteDistrict" onchange="window.app.updateVoteConstituencies()" disabled>
+                    <option value="">Select District</option>
+                </select>
+            </div>
+            <div class="vote-field-group"><label data-key="constituencyLabel">Constituency *</label>
+                <select class="vote-input" id="voteConstituency" disabled>
+                    <option value="">Select Constituency</option>
+                </select>
+            </div>
+          </div>
+          <div class="camera-section">
+            <h4 data-key="facialBiometric"><i class="fas fa-camera"></i> Facial Biometric Verification *</h4>
+            <p style="font-size:0.8rem;color:#666;margin-bottom:10px;" data-key="verifyMsg">Please verify your identity using face capture</p>
+            <video id="videoElement" class="camera-video" autoplay playsinline></video>
+            <br>
+            <button class="btn-camera" onclick="window.app.capturePhoto()" id="captureBtn" disabled><i class="fas fa-camera"></i> <span data-key="capturePhoto">Capture Photo</span></button>
+            <button class="btn-camera" onclick="window.app.retakePhoto()" id="retakeBtn" style="display:none;"><i class="fas fa-redo"></i> <span data-key="retake">Retake</span></button>
+            <button class="btn-camera" onclick="window.app.retryCamera()" id="retryCameraBtn" style="display:none;background:#e67e22;"><i class="fas fa-sync-alt"></i> <span data-key="retryCamera">Retry Camera Access</span></button>
+            <canvas id="canvasElement" width="400" height="300" style="display:none;"></canvas>
+            <h4 style="margin-top:10px;" data-key="capturedImage">Captured Image</h4>
+            <img id="capturedPhoto" class="captured-photo-img" alt="Captured photo">
+            <div class="photo-captured-badge" id="photoCapturedBadge"><i class="fas fa-check-circle"></i> <span data-key="photoCaptured">Photo Captured</span></div>
+          </div>
+          <div class="divider-label"><span data-key="selectCandidate">Select a Candidate</span></div>
+          <div id="candidatesVoteList"></div>
+          <button class="btn-submit-vote" onclick="window.app.castVote()" id="submitVoteBtn"><i class="fas fa-lock"></i> <span data-key="submitVote">Submit Vote to Blockchain</span></button>
+        </div>
+        <div>
+          <div class="vote-sidebar-card"><h4><i class="fas fa-shield-halved"></i> <span data-key="votingSecurity">Voting Security</span></h4>
+            <div class="info-row"><i class="fas fa-check-circle"></i><p data-key="security1">One vote per CNIC with facial biometric verification.</p></div>
+            <div class="info-row"><i class="fas fa-lock"></i><p data-key="security2">Votes encrypted and stored on blockchain.</p></div>
+            <div class="info-row"><i class="fas fa-fingerprint"></i><p data-key="security3">Facial biometric captured for audit trail.</p></div>
+            <div class="info-row"><i class="fas fa-receipt"></i><p data-key="security4">Unique Transaction ID for verification.</p></div>
+          </div>
+          <div class="vote-sidebar-card"><h4><i class="fas fa-clock"></i> <span data-key="importantDates">Important Dates</span></h4>
+            <div class="info-row"><i class="fas fa-calendar"></i><p data-key="regDeadline">Registration Deadline: <strong>15 June 2026</strong></p></div>
+            <div class="info-row"><i class="fas fa-calendar-check"></i><p data-key="electionDay">Election Day: <strong>25 July 2026</strong></p></div>
+            <div class="info-row"><i class="fas fa-calendar-alt"></i><p data-key="resultDay">Results: <strong>26 July 2026</strong></p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Election Control Page -->
+    <div class="page" id="page-election-control">
+      <div class="page-heading"><h2 data-key="electionControl">Election Control Panel</h2><p data-key="electionControlSub">Admin: Activate or deactivate election types. Only one election can be active at a time.</p></div>
+      <div class="election-control-panel">
+        <h3><i class="fas fa-toggle-on"></i> <span data-key="electionStatus">Election Status Management</span></h3>
+        <div class="election-control-grid" id="electionControlGrid"></div>
+      </div>
+      <div class="election-control-panel" style="margin-top:20px;">
+        <h3><i class="fas fa-map-marker-alt"></i> Active Locations</h3>
+        <div style="display:flex;gap:15px;flex-wrap:wrap;margin-bottom:15px;">
+            <div>
+               <label style="font-weight:600;" data-key="provinceLabel">Province:</label>
+                <select class="vote-input" id="activeProvince" onchange="window.app.setActiveProvince()" style="min-width:180px;">
+                    <option value="all">All Provinces</option>
+                    <option value="punjab">Punjab</option>
+                    <option value="sindh">Sindh</option>
+                    <option value="kpk">KPK</option>
+                    <option value="balochistan">Balochistan</option>
+                    <option value="ict">Islamabad</option>
+                </select>
+            </div>
+            <div id="activeProvinceStatus" style="display:flex;align-items:center;font-weight:bold;color:#22c55e;">
+                ✅ All provinces active
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div class="page" id="page-admin">
+      <div class="page-heading">
+        <h2 data-key="dashboard">Admin Dashboard</h2>
+        <p data-key="adminSub">Election statistics and voter database.</p>
+      </div>
+      <div class="admin-grid">
+        <div class="admin-card">
+          <h4><i class="fas fa-chart-pie"></i> <span data-key="statistics">Statistics</span></h4>
+          <div class="admin-stat-row">
+            <div class="admin-stat-item"><span class="key" data-key="totalVotesAdmin">Total Votes</span><span class="v" id="admTotalVotes">0</span></div>
+            <div class="admin-stat-item"><span class="key" data-key="currentElection">Current Election</span><span class="v" id="admElecVotes">0</span></div>
+          </div>
+        </div>
+        <div class="admin-card">
+          <h4><i class="fas fa-users"></i> <span data-key="recentVoters">Recent Voters</span></h4>
+          <table class="data-table">
+            <thead><tr><th data-key="name">Name</th><th data-key="cnic">CNIC</th><th data-key="time">Time</th></tr></thead>
+            <tbody id="recentVotersTbl"></tbody>
+          </table>
+        </div>
+        <div class="admin-card">
+          <h4><i class="fas fa-trophy"></i> <span data-key="performance">Performance</span></h4>
+          <div id="admPerfList"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Manage Candidates -->
+    <div class="page" id="page-manage">
+      <div class="page-heading"><h2 data-key="manageHeading">Manage Candidates</h2><p data-key="manageSub">Add, edit, or remove candidates.</p></div>
+      <div class="manage-toolbar"><button class="btn-add" onclick="window.app.openAddForm()"><i class="fas fa-plus"></i> <span data-key="addCandidate">Add Candidate</span></button></div>
+      <div class="form-card" id="candidateFormCard">
+        <h4 id="formCardTitle" data-key="addNewCandidate">Add New Candidate</h4>
+        <div class="form-grid">
+          <div class="fg"><label data-key="fullName">Full Name</label><input type="text" id="fName"></div>
+          <div class="fg"><label data-key="party">Party</label><input type="text" id="fParty"></div>
+          <div class="fg"><label data-key="symbolLabel">Symbol (icon)</label><input type="text" id="fSymbol" placeholder="star, crown, heart..."></div>
+          <div class="fg"><label data-key="statusLabel">Status</label><select id="fStatus"><option value="active" data-key="activeOpt">Active</option><option value="inactive" data-key="inactiveOpt">Inactive</option></select></div>
+        </div>
+        <input type="hidden" id="editCandId">
+        <div class="form-actions"><button class="btn-save" onclick="window.app.saveCandidate()"><i class="fas fa-save"></i> <span data-key="save">Save</span></button><button class="btn-cancel-form" onclick="window.app.closeForm()"><span data-key="cancel">Cancel</span></button></div>
+      </div>
+      <table class="cands-table"><thead><tr><th data-key="avatar">Avatar</th><th data-key="name">Name</th><th data-key="party">Party</th><th data-key="symbol">Symbol</th><th data-key="status">Status</th><th data-key="votes">Votes</th><th data-key="actions">Actions</th></tr></thead><tbody id="candidatesTblBody"></tbody></table>
+    </div>
+    <!-- Results -->
+    <div class="page" id="page-results">
+      <div class="page-heading"><h2 data-key="resultsHeading">Results – <span id="resultsElectionType">National Assembly</span></h2><p data-key="resultsSub">Real-time vote counts.</p></div>
+<button class="btn-camera" onclick="window.app.refreshResults(); window.app.chartsManager.updateCharts(window.app.getActiveCandidates(), window.app)" style="margin-bottom:10px;"><i class="fas fa-sync-alt"></i> Refresh Results</button>
+      <div class="results-grid">
+        <div class="chart-card"><div class="card-title"><div class="card-title-icon"><i class="fas fa-chart-bar"></i></div><h3 data-key="voteDistribution">Vote Distribution</h3></div><div class="chart-wrap"><canvas id="resBar"></canvas></div></div>
+        <div class="chart-card"><div class="card-title"><div class="card-title-icon"><i class="fas fa-chart-pie"></i></div><h3 data-key="voteShare">Vote Share</h3></div><div class="chart-wrap"><canvas id="resPie"></canvas></div></div>
+      </div>
+      <div class="results-list-card"><div class="card-title"><div class="card-title-icon"><i class="fas fa-ranking-star"></i></div><h3 data-key="detailedStanding">Detailed Standing</h3></div><div id="resultsBarsContainer"></div></div>
+    </div>
+
+    <!-- Verify -->
+    <div class="page" id="page-verify">
+      <div class="page-heading"><h2 data-key="verifyHeading">Verify Your Vote</h2><p data-key="verifySub">Enter your Transaction ID.</p></div>
+      <div class="verify-wrap"><div class="verify-box"><input type="text" class="vote-input" id="verifyInput" placeholder="Enter TX ID"><button class="btn-submit-vote" onclick="window.app.verifyVote()"><i class="fas fa-magnifying-glass"></i> <span data-key="verifyBtn">Verify</span></button><div class="verify-result" id="verifyResult"></div></div></div>
+    </div>
+   <!-- Form-45 Page -->
+<div class="page" id="page-form45">
+    <div class="page-heading">
+        <h2 data-key="form45Heading">Form-45 - Election Results</h2>
+        <p data-key="form45Sub">Official result forms by constituency - Public Document</p>
+    </div>
+    
+    <!-- Public Notice -->
+    <div style="background:#fef3c7;padding:15px;border-radius:8px;margin-bottom:20px;border-left:5px solid #f59e0b;">
+        <strong>📋 PUBLIC DOCUMENT:</strong> 
+        Form-45 is a public record under the Elections Act 2017. All citizens, candidates, and polling agents have the right to access and verify these results.
+    </div>
+    
+    <!-- Instructions -->
+    <div style="background:#e8f5e9;padding:15px;border-radius:8px;margin-bottom:20px;border-left:5px solid #22c55e;">
+        <strong>📝 HOW TO USE:</strong>
+        <ol style="margin:8px 0 0 20px;padding:0;">
+            <li>Select <strong>Province</strong> where election is held</li>
+            <li>Select <strong>District</strong> from the dropdown</li>
+            <li>Select <strong>Constituency</strong> to view results</li>
+            <li>Click <strong>Print Form-45</strong> for official copy</li>
+        </ol>
+    </div>
+    
+    <!-- Filters -->
+    <div style="display:flex;gap:15px;flex-wrap:wrap;margin-bottom:20px;">
+        <div>
+            <label style="font-weight:600;" data-key="provinceLabel">Province:</label>
+            <select class="vote-input" id="form45Province" onchange="window.app.updateDistricts()" style="min-width:180px;">
+                <option value="">-- Select Province --</option>
+                <option value="punjab">Punjab</option>
+                <option value="sindh">Sindh</option>
+                <option value="kpk">Khyber Pakhtunkhwa</option>
+                <option value="balochistan">Balochistan</option>
+                <option value="ict">Islamabad Capital</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-weight:600;" data-key="districtLabel">District:</label>
+            <select class="vote-input" id="form45District" onchange="window.app.updateConstituencies()" style="min-width:180px;" disabled>
+                <option value="">-- Select District --</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-weight:600;" data-key="constituencyLabel">Constituency:</label>
+            <select class="vote-input" id="form45Constituency" onchange="window.app.generateForm45()" style="min-width:200px;" disabled>
+                <option value="">-- Select Constituency --</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- Form-45 Output -->
+    <div id="form45Container" style="display:none;">
+        <div id="form45Content" style="max-width:850px;margin:0 auto;"></div>
+        <br>
+        <div style="text-align:center;">
+            <button class="btn-add" onclick="window.app.printForm45()" style="background:#0a3d2e;padding:12px 30px;font-size:1rem;margin-right:10px;">
+                <i class="fas fa-print"></i> 🖨️ Print Form-45
+        </div>
+    </div>
+</div>
+          
+    <!-- Complaints Page -->
+    <div class="page" id="page-complaints">
+      <div class="page-heading"><h2 data-key="complaintsHeading">Complaints & Grievances</h2><p data-key="complaintsSub">File a complaint or check complaint status.</p></div>
+      <div class="vote-layout">
+        <div class="vote-booth">
+          <h4 style="margin-bottom:16px;"><i class="fas fa-pen-to-square"></i> <span data-key="fileComplaint">File a Complaint</span></h4>
+          <div class="voter-form-grid">
+            <div class="vote-field-group"><label data-key="fullName">Your Name *</label><input type="text" class="vote-input" id="compName"></div>
+            <div class="vote-field-group"><label data-key="cnic">CNIC *</label><input type="text" class="vote-input" id="compCnic"></div>
+            <div class="vote-field-group"><label data-key="phone">Phone *</label><input type="text" class="vote-input" id="compPhone"></div>
+            <div class="vote-field-group"><label data-key="complaintType">Complaint Type *</label><select class="vote-input" id="compType"><option value="">Select</option><option value="voting">Voting Issue</option><option value="registration">Registration Problem</option><option value="candidate">Candidate Complaint</option><option value="technical">Technical Issue</option><option value="other">Other</option></select></div>
+          </div>
+          <div class="vote-field-group full-width"><label data-key="description">Description *</label><textarea class="vote-input" id="compDesc" rows="4" placeholder="Describe your complaint..."></textarea></div>
+          <button class="btn-submit-vote" onclick="window.app.submitComplaint()"><i class="fas fa-paper-plane"></i> <span data-key="submitComplaintBtn">Submit Complaint</span></button>
+          <div id="complaintSuccess" style="display:none;text-align:center;margin-top:20px;">
+            <div style="font-size:3rem;">✅</div>
+            <h4 style="color:#14532d;">Complaint Filed!</h4>
+            <p>Your Complaint ID: <strong id="complaintIdDisplay">---</strong></p>
+            <p style="color:#666;">Track your complaint using this ID.</p>
+          </div>
+        </div>
+        <div>
+          <div class="vote-sidebar-card">
+            <h4><i class="fas fa-search"></i> <span data-key="trackComplaintFull">Track Complaint</span></h4>
+            <input type="text" class="vote-input" id="trackComplaintId" placeholder="Enter Complaint ID" style="margin-bottom:10px;">
+            <button class="btn-submit-vote" onclick="window.app.trackComplaint()"><i class="fas fa-search"></i> Track</button>
+            <div id="trackResult" style="margin-top:15px;display:none;"></div>
+          </div>
+          <div class="vote-sidebar-card" id="adminComplaintsSection" style="display:none;">
+            <h4><i class="fas fa-gavel"></i> Admin: All Complaints</h4>
+            <div id="allComplaintsList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Voter Verification Page -->
+    <div class="page" id="page-verify-voters">
+      <div class="page-heading"><h2 data-key="verifyVotersHeading">Voter Verification</h2><p data-key="verifyVotersSub">Review and verify registered voters.</p></div>
+      <div class="admin-grid" style="grid-template-columns:1fr;">
+        <div class="admin-card">
+          <h4><i class="fas fa-users"></i> All Registered Voters</h4>
+          <div style="overflow-x:auto;">
+            <table class="cands-table" style="width:100%;">
+              <thead>
+                <tr>
+                  <th>CNIC</th>
+                  <th>Name</th>
+                  <th>Father Name</th>
+                  <th>Age</th>
+                  <th>Gender</th>
+                  <th>Constituency</th>
+                  <th>Province</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="voterVerificationTable">
+                <tr><td colspan="9" style="text-align:center;padding:20px;">Loading voters...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- FAQ -->
+    <div class="page" id="page-faq">
+      <div class="page-heading"><h2 data-key="faqHeading">FAQs</h2><p data-key="faqSub">Common questions.</p></div>
+      <div class="faq-section" id="faqContainer"></div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-main">
+      <div class="footer-brand"><div class="f-title" data-key="ecpFooter">Election Commission of Pakistan</div><p data-key="footerDesc">Constitution Avenue, Islamabad.</p></div>
+      <div class="footer-col"><h5 data-key="services">Services</h5><a href="#" data-key="voterReg">Voter Registration</a><a href="#" data-key="voterList">Voter List</a><a href="#" data-key="candidatePortal">Candidate Portal</a></div>
+      <div class="footer-col"><h5 data-key="resources">Resources</h5><a href="#" data-key="electoralLaws">Electoral Laws</a><a href="#" data-key="codeOfConduct">Code of Conduct</a><a href="#" data-key="pastResults">Past Results</a></div>
+      <div class="footer-col"><h5 data-key="contact">Contact</h5><a href="#">111-327-000</a><a href="#">info@ecp.gov.pk</a></div>
+    </div>
+    <div class="footer-bottom"><p data-key="copyright">© 2026 ECP. All rights reserved.</p><div class="blockchain-note"><span class="blockchain-check">✓</span> <span data-key="securedBy">Secured by Blockchain</span></div></div>
+  </footer>
+  
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

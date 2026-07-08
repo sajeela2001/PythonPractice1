@@ -1,0 +1,7 @@
+TX ID,Voter CNIC,Candidate ID,Candidate Name,Election Type,Face Verified,Timestamp
+0x18f5a3b2c9d41234,12345-****-3,n1,Ahmed Nawaz Khan,national,Yes,6/1/2026 10:15
+0x28f6b3c4d5e67890,12345-****-6,n3,Muhammad Bilal,national,Yes,6/1/2026 10:22
+0x38a7c4d5e6f78901,12345-****-9,p3,Tariq Mehmood,provincial,Yes,6/1/2026 10:30
+0x48b8d5e6f7890123,12345-****-12,s1,Dr. Farooq Sattar,senate,Yes,6/1/2026 10:45
+0x58c9e6f789012345,12345-****-16,n2,Fatima Ali Zaidi,national,Yes,6/1/2026 11:00
+0x68d0f78901234567,12345-****-19,p1,Raja Muhammad Ali,provincial,Yes,6/1/2026 11:15

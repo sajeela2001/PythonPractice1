@@ -1,0 +1,12 @@
+ID,Name,Party,Symbol,Election Type,Constituency,Status,Votes
+n1,Ahmed Nawaz Khan,PPP,star,national,NA-1,active,45
+n2,Fatima Ali Zaidi,PML-N,flag,national,NA-1,active,38
+n3,Muhammad Bilal,PTI,balance-scale,national,NA-1,active,52
+n4,Ayesha Malik,Independent,leaf,national,NA-1,active,15
+p1,Raja Muhammad Ali,PPP,crown,provincial,NA-1,active,30
+p2,Sana Khalid,PML-N,moon,provincial,NA-1,active,25
+p3,Tariq Mehmood,PTI,bolt,provincial,NA-1,active,42
+s1,Dr. Farooq Sattar,MQM,globe,senate,NA-1,active,18
+s2,Nasreen Jalil,Independent,feather,senate,NA-1,active,12
+l1,Kamran Tessori,Independent,house,local,NA-1,active,8
+l2,Rukhsana Zubairi,PPP,hand,local,NA-1,active,22

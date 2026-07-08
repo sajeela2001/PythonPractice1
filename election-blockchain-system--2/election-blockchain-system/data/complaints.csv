@@ -1,0 +1,7 @@
+Complaint ID,Name,CNIC,Phone,Type,Description,Status,Filed Date,Resolution,Resolved Date
+COMP-000001,Ahmed Khan,12345-****-1,3001234567,voting,Machine was slow at polling station NA-1,resolved,6/1/2026,Issue resolved. Machine restarted.,6/1/2026
+COMP-000002,Fatima Ali,12345-****-2,3011234567,registration,My name was not on voter list,pending,6/1/2026,,
+COMP-000002,Fatima Ali,12345-****-2,3011234567,registration,My name was not on voter list,pending,6/1/2026,,
+COMP-000003,Usman Tariq,12345-****-3,3021234567,candidate,Campaign materials within 100m of polling station,resolved,6/1/2026,Materials removed by election staff,6/1/2026
+COMP-000004,Ayesha Malik,12345-****-4,3031234567,technical,Camera verification failed multiple times,pending,6/2/2026,,
+COMP-000005,Bilal Hassan,12345-****-5,3041234567,other,Polling station opened 30 minutes late,pending,6/2/2026,,
